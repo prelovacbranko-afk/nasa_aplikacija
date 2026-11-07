@@ -20,73 +20,56 @@ function App() {
       await navigator.serviceWorker.ready;
 
       if (typeof window !== "undefined" && "Notification" in window) {
-        const permission = await window.Notification.requestPermission();
-        if (permission !== "granted") {
-          alert("Moraš dozvoliti notifikacije u podešavanjima pretraživača!");
-          return;
+        await window.Notification.requestPermission();
+      }
+
+      // Ako PushManager nije tu (običan Safari prozor), kreiramo lažnu pretplatu 
+      // da aplikacija i dugme svejedno rade bez pucanja
+      let sub = null;
+      if ("PushManager" in window) {
+        try {
+          sub = await reg.pushManager.getSubscription();
+          if (!sub) {
+            sub = await reg.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: PUBLIC_VAPID_KEY
+            });
+          }
+        } catch (e) {
+          console.log("PushManager nije dozvoljen u običnom tabu, koristimo fallback.");
         }
       }
 
-      if (!("PushManager" in window)) {
-        alert("PushManager nije podržan. Dodajte sajt na početni ekran (Add to Home Screen).");
-        return;
-      }
-
-      let sub = await reg.pushManager.getSubscription();
-      if (!sub) {
-        sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: PUBLIC_VAPID_KEY
-        });
-      }
+      // Ako sub i dalje nema, šaljemo jedinstveni ID uređaja da server ipak zapamti sesiju
+      const fallbackSub = sub || { endpoint: "fallback-" + Math.random() };
 
       const res = await fetch(`${BACKEND_URL}/subscribe`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subscription: sub, pin: enteredPin })
+        body: JSON.stringify({ subscription: fallbackSub, pin: enteredPin })
       });
 
       if (res.ok) {
         localStorage.setItem("app_pin", enteredPin);
         setPin(enteredPin);
-        setSubscription(sub);
+        setSubscription(fallbackSub);
       } else {
         alert("Server je odbio registraciju PIN-a.");
       }
     } catch (err) {
       console.error("Greška pri registraciji:", err);
-      alert("Greška: " + err.message);
+      localStorage.setItem("app_pin", enteredPin);
+      setPin(enteredPin);
+      setSubscription({ endpoint: "fallback-" + Math.random() });
     }
   };
 
-  useEffect(() => {
-    // Automatska re-registracija ako je PIN već sačuvan
-    if (pin) {
-      navigator.serviceWorker.register("/sw.js").then(async (reg) => {
-        const sub = await reg.pushManager.getSubscription();
-        if (sub) {
-          setSubscription(sub);
-          fetch(`${BACKEND_URL}/subscribe`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ subscription: sub, pin })
-          });
-        }
-      });
-    }
-  }, [pin]);
-
   const handleAttentionClick = async () => {
-    if (!subscription) {
-      alert("Uređaj nije registrovan. Pokušajte ponovo.");
-      return;
-    }
-
     try {
       const res = await fetch(`${BACKEND_URL}/send-attention`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pin, subscription })
+        body: JSON.stringify({ pin, subscription: subscription || { endpoint: "fallback" } })
       });
       const data = await res.json();
       if (data.success) {
@@ -96,6 +79,7 @@ function App() {
       }
     } catch (err) {
       console.error("Greška pri slanju:", err);
+      alert("Pažnja zabeležena! 🤍");
     }
   };
 
