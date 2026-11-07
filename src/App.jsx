@@ -1,85 +1,79 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import "./App.css";
 
-const PUBLIC_VAPID_KEY = "BMDbWRoEMLNqmlTYG6DEDoe8DHOWKLwTjuzDiAfQlCfqQmWBH_7t7sSZWVsHVGQmn7Q0ilPUaM-EY0HZmbIJkek";
 const BACKEND_URL = "https://nasa-aplikacija.onrender.com";
 
 function App() {
   const [pin, setPin] = useState(localStorage.getItem("app_pin") || null);
   const [inputPin, setInputPin] = useState("");
-  const [subscription, setSubscription] = useState(null);
+  // Generišemo jedinstveni ID za ovaj uređaj da server zna ko je poslao
+  const deviceIdRef = useRef(localStorage.getItem("device_id") || Math.random().toString(36).substring(7));
 
-  const registerDevice = async (enteredPin) => {
+  useEffect(() => {
+    if (!localStorage.getItem("device_id")) {
+      localStorage.setItem("device_id", deviceIdRef.current);
+    }
+  }, []);
+
+  // Povezivanje na sobu
+  const joinRoom = async (enteredPin) => {
     try {
-      if (!("serviceWorker" in navigator)) {
-        alert("Service Worker nije podržan.");
-        return;
-      }
-
-      const reg = await navigator.serviceWorker.register("/sw.js");
-      await navigator.serviceWorker.ready;
-
-      if (typeof window !== "undefined" && "Notification" in window) {
-        await window.Notification.requestPermission();
-      }
-
-      // Ako PushManager nije tu (običan Safari prozor), kreiramo lažnu pretplatu 
-      // da aplikacija i dugme svejedno rade bez pucanja
-      let sub = null;
-      if ("PushManager" in window) {
-        try {
-          sub = await reg.pushManager.getSubscription();
-          if (!sub) {
-            sub = await reg.pushManager.subscribe({
-              userVisibleOnly: true,
-              applicationServerKey: PUBLIC_VAPID_KEY
-            });
-          }
-        } catch (e) {
-          console.log("PushManager nije dozvoljen u običnom tabu, koristimo fallback.");
-        }
-      }
-
-      // Ako sub i dalje nema, šaljemo jedinstveni ID uređaja da server ipak zapamti sesiju
-      const fallbackSub = sub || { endpoint: "fallback-" + Math.random() };
-
-      const res = await fetch(`${BACKEND_URL}/subscribe`, {
+      const res = await fetch(`${BACKEND_URL}/join-room`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subscription: fallbackSub, pin: enteredPin })
+        body: JSON.stringify({ pin: enteredPin, deviceId: deviceIdRef.current })
       });
 
       if (res.ok) {
         localStorage.setItem("app_pin", enteredPin);
         setPin(enteredPin);
-        setSubscription(fallbackSub);
       } else {
-        alert("Server je odbio registraciju PIN-a.");
+        alert("Greška pri povezivanju na sobu.");
       }
     } catch (err) {
-      console.error("Greška pri registraciji:", err);
-      localStorage.setItem("app_pin", enteredPin);
-      setPin(enteredPin);
-      setSubscription({ endpoint: "fallback-" + Math.random() });
+      console.error("Greška:", err);
+      alert("Serverska greška.");
     }
   };
 
+  // Pozadinski detektor (proverava svake 2 sekunde da li je stigla pažnja)
+  useEffect(() => {
+    if (!pin) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`${BACKEND_URL}/check-attention/${pin}/${deviceIdRef.current}`);
+        const data = await res.json();
+        
+        if (data.triggered) {
+          // Vibracija ako uređaj podržava
+          if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+          alert("🤍 Stigla ti je pažnja! Neko misli na tebe.");
+        }
+      } catch (err) {
+        // Ignorisati tihe greške mreže u pozadini
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [pin]);
+
+  // Klik na dugme - slanje pažnje
   const handleAttentionClick = async () => {
     try {
       const res = await fetch(`${BACKEND_URL}/send-attention`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pin, subscription: subscription || { endpoint: "fallback" } })
+        body: JSON.stringify({ pin, deviceId: deviceIdRef.current })
       });
-      const data = await res.json();
-      if (data.success) {
+      
+      if (res.ok) {
         alert("Pažnja poslata! 🤍");
       } else {
-        alert("Greška: " + (data.error || "Drugi uređaj još nije povezan"));
+        alert("Greška pri slanju.");
       }
     } catch (err) {
-      console.error("Greška pri slanju:", err);
-      alert("Pažnja zabeležena! 🤍");
+      console.error("Greška:", err);
     }
   };
 
@@ -96,7 +90,7 @@ function App() {
           style={{ padding: "12px", fontSize: "18px", borderRadius: "8px", border: "1px solid #444", background: "#111", color: "#fff", textAlign: "center", width: "200px" }}
         />
         <button 
-          onClick={() => { if(inputPin.trim()) registerDevice(inputPin.trim()); else alert("Unesi PIN!"); }} 
+          onClick={() => { if(inputPin.trim()) joinRoom(inputPin.trim()); else alert("Unesi PIN!"); }} 
           style={{ padding: "12px 25px", fontSize: "16px", background: "#E91E63", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer" }}
         >
           Poveži se
@@ -107,7 +101,7 @@ function App() {
 
   return (
     <main className="home-screen">
-      <button className="settings-button" aria-label="Opcije" onClick={() => { localStorage.clear(); setPin(null); setSubscription(null); }}>
+      <button className="settings-button" aria-label="Opcije" onClick={() => { localStorage.clear(); setPin(null); }}>
         ⚙
       </button>
 

@@ -1,5 +1,4 @@
 const express = require("express");
-const webpush = require("web-push");
 const cors = require("cors");
 const path = require("path");
 
@@ -7,65 +6,55 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const publicVapidKey = "BMDbWRoEMLNqmlTYG6DEDoe8DHOWKLwTjuzDiAfQlCfqQmWBH_7t7sSZWVsHVGQmn7Q0ilPUaM-EY0HZmbIJkek";
-const privateVapidKey = "85RIkbMUyNNudQ1CvP_r-C5p3s_W2FVI0QDcDRduGJg";
-
-webpush.setVapidDetails(
-  "mailto:admin@nasa-aplikacija.com",
-  publicVapidKey,
-  privateVapidKey
-);
-
-// Čuvamo uređaje sortirane po PIN-u: { "1234": [sub1, sub2] }
+// Sobe: { "1234": { lastAction: timestamp, sender: "id" } }
 let rooms = {};
 
-// Prijava uređaja preko PIN-a
-app.post("/subscribe", (req, res) => {
-  const { subscription, pin } = req.body;
-  if (!subscription || !pin) {
-    return res.status(400).json({ error: "Nedostaje subscription ili PIN" });
+// Prijava na PIN sobu
+app.post("/join-room", (req, res) => {
+  const { pin, deviceId } = req.body;
+  if (!pin || !deviceId) {
+    return res.status(400).json({ error: "Nedostaje PIN ili ID uređaja" });
   }
-
+  
   if (!rooms[pin]) {
-    rooms[pin] = [];
+    rooms[pin] = { lastAction: 0, sender: null, devices: [] };
   }
 
-  // Sprečavamo dupliranje istog uređaja u istoj sobi
-  rooms[pin] = rooms[pin].filter(sub => sub.endpoint !== subscription.endpoint);
-  rooms[pin].push(subscription);
-
-  // Zadržavamo maksimalno 2 uređaja po PIN-u
-  if (rooms[pin].length > 2) {
-    rooms[pin].shift();
+  if (!rooms[pin].devices.includes(deviceId)) {
+    rooms[pin].devices.push(deviceId);
   }
 
-  console.log(`Uređaj uspešno prijavljen na PIN: ${pin}. Ukupno uređaja u sobi: ${rooms[pin].length}`);
-  res.status(201).json({ message: "Pretplata uspešna!" });
+  res.status(200).json({ success: true });
 });
 
-// Slanje notifikacije drugom uređaju u istoj sobi
+// Slanje pažnje
 app.post("/send-attention", (req, res) => {
-  const { pin, subscription: senderSub } = req.body;
-  
-  if (!rooms[pin] || rooms[pin].length < 2) {
-    return res.status(400).json({ error: "Drugi uređaj još uvek nije povezan sa ovim PIN-om!" });
+  const { pin, deviceId } = req.body;
+  if (!rooms[pin]) {
+    rooms[pin] = { lastAction: 0, sender: null, devices: [] };
   }
 
-  // Nađi onaj drugi uređaj koji NIJE pošiljalac
-  const targetDevice = rooms[pin].find(sub => sub.endpoint !== senderSub.endpoint) || rooms[pin][0];
+  rooms[pin].lastAction = Date.now();
+  rooms[pin].sender = deviceId;
 
-  const payload = JSON.stringify({
-    title: "Pažnja! 🤍",
-    body: "Neko želi tvoju pažnju.",
-    icon: "/icon.png"
-  });
+  console.log(`Primljena pažnja u sobi ${pin} od uređaja ${deviceId}`);
+  res.status(200).json({ success: true });
+});
 
-  webpush.sendNotification(targetDevice, payload)
-    .then(() => res.status(200).json({ success: true }))
-    .catch(err => {
-      console.error("Greška pri slanju:", err);
-      res.status(500).json({ error: "Greška pri slanju notifikacije" });
-    });
+// Provera statusa (Long polling / interval)
+app.get("/check-attention/:pin/:deviceId", (req, res) => {
+  const { pin, deviceId } = req.params;
+  const room = rooms[pin];
+
+  if (!room) {
+    return res.status(200).json({ triggered: false });
+  }
+
+  // Ako je akcija bila u poslednjih 3 sekunde, i poslao ju je DRUGI uređaj
+  const isRecent = (Date.now() - room.lastAction) < 3000;
+  const triggered = isRecent && room.sender !== deviceId;
+
+  res.status(200).json({ triggered });
 });
 
 app.use(express.static(path.join(__dirname, "dist")));
