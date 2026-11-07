@@ -38,7 +38,7 @@ app.post("/subscribe", (req, res) => {
 // Marija šalje Branku
 app.post("/send-to-branko", (req, res) => {
   if (!subscriptions.branko) {
-    return.status(400).json({ error: "Brankov uređaj nije registrovan!" });
+    return res.status(400).json({ error: "Brankov uređaj nije registrovan!" });
   }
 
   const payload = JSON.stringify({
@@ -58,7 +58,7 @@ app.post("/send-to-branko", (req, res) => {
 // Branko šalje Mariji
 app.post("/send-to-marija", (req, res) => {
   if (!subscriptions.marija) {
-    return.status(400).json({ error: "Marijin uređaj nije registrovan!" });
+    return res.status(400).json({ error: "Marijin uređaj nije registrovan!" });
   }
 
   const payload = JSON.stringify({
