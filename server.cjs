@@ -16,62 +16,55 @@ webpush.setVapidDetails(
   privateVapidKey
 );
 
-// Globalna memorija za uređaje
-let subscriptions = {
-  branko: null,
-  marija: null
-};
+// Čuvamo uređaje sortirane po PIN-u: { "1234": [sub1, sub2] }
+let rooms = {};
 
-// Prijava uređaja
+// Prijava uređaja preko PIN-a
 app.post("/subscribe", (req, res) => {
-  const { subscription, role } = req.body;
-  if (role === "branko") {
-    subscriptions.branko = subscription;
-    console.log("Branko uspešno registrovan!");
-  } else if (role === "marija") {
-    subscriptions.marija = subscription;
-    console.log("Marija uspešno registrovana!");
+  const { subscription, pin } = req.body;
+  if (!subscription || !pin) {
+    return res.status(400).json({ error: "Nedostaje subscription ili PIN" });
   }
+
+  if (!rooms[pin]) {
+    rooms[pin] = [];
+  }
+
+  // Sprečavamo dupliranje istog uređaja u istoj sobi
+  rooms[pin] = rooms[pin].filter(sub => sub.endpoint !== subscription.endpoint);
+  rooms[pin].push(subscription);
+
+  // Zadržavamo maksimalno 2 uređaja po PIN-u
+  if (rooms[pin].length > 2) {
+    rooms[pin].shift();
+  }
+
+  console.log(`Uređaj uspešno prijavljen na PIN: ${pin}. Ukupno uređaja u sobi: ${rooms[pin].length}`);
   res.status(201).json({ message: "Pretplata uspešna!" });
 });
 
-// Marija šalje Branku
-app.post("/send-to-branko", (req, res) => {
-  if (!subscriptions.branko) {
-    return res.status(400).json({ error: "Brankov uređaj nije registrovan!" });
+// Slanje notifikacije drugom uređaju u istoj sobi
+app.post("/send-attention", (req, res) => {
+  const { pin, subscription: senderSub } = req.body;
+  
+  if (!rooms[pin] || rooms[pin].length < 2) {
+    return res.status(400).json({ error: "Drugi uređaj još uvek nije povezan sa ovim PIN-om!" });
   }
+
+  // Nađi onaj drugi uređaj koji NIJE pošiljalac
+  const targetDevice = rooms[pin].find(sub => sub.endpoint !== senderSub.endpoint) || rooms[pin][0];
 
   const payload = JSON.stringify({
     title: "Pažnja! 🤍",
-    body: "Marija želi tvoju pažnju.",
+    body: "Neko želi tvoju pažnju.",
     icon: "/icon.png"
   });
 
-  webpush.sendNotification(subscriptions.branko, payload)
+  webpush.sendNotification(targetDevice, payload)
     .then(() => res.status(200).json({ success: true }))
     .catch(err => {
-      console.error("Greška pri slanju Branku:", err);
-      res.status(500).json({ error: "Greška pri slanju" });
-    });
-});
-
-// Branko šalje Mariji
-app.post("/send-to-marija", (req, res) => {
-  if (!subscriptions.marija) {
-    return res.status(400).json({ error: "Marijin uređaj nije registrovan!" });
-  }
-
-  const payload = JSON.stringify({
-    title: "Pažnja! 🤍",
-    body: "Branko želi tvoju pažnju.",
-    icon: "/icon.png"
-  });
-
-  webpush.sendNotification(subscriptions.marija, payload)
-    .then(() => res.status(200).json({ success: true }))
-    .catch(err => {
-      console.error("Greška pri slanju Mariji:", err);
-      res.status(500).json({ error: "Greška pri slanju" });
+      console.error("Greška pri slanju:", err);
+      res.status(500).json({ error: "Greška pri slanju notifikacije" });
     });
 });
 
