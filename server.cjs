@@ -7,7 +7,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Tvoji VAPID ključevi (zameniti pravim ključevima iz generisanja)
 const publicVapidKey = "BMDbWRoEMLNqmlTYG6DEDoe8DHOWKLwTjuzDiAfQlCfqQmWBH_7t7sSZWVsHVGQmn7Q0ilPUaM-EY0HZmbIJkek";
 const privateVapidKey = "85RIkbMUyNNudQ1CvP_r-C5p3s_W2FVI0QDcDRduGJg";
 
@@ -17,43 +16,64 @@ webpush.setVapidDetails(
   privateVapidKey
 );
 
-// Niz pretplata (čuvanje pretplate za uređaje)
-let subscriptions = [];
+let mySubscription = null;      // Brankov uređaj
+let herSubscription = null;     // Marijin uređaj
 
-// Ruta gde frontend šalje informaciju za Push pretplatu
+// Prijava uređaja sa određenom ulogom
 app.post("/subscribe", (req, res) => {
-  const subscription = req.body;
+  const { subscription, role } = req.body;
   
-  // Izbegavamo duplikate
-  const exists = subscriptions.some(s => s.endpoint === subscription.endpoint);
-  if (!exists) {
-    subscriptions.push(subscription);
+  if (role === "branko") {
+    mySubscription = subscription;
+    console.log("Sačuvana Brankova pretplata!");
+  } else if (role === "marija") {
+    herSubscription = subscription;
+    console.log("Sačuvana Marijina pretplata!");
   }
   
   res.status(201).json({ message: "Pretplata uspešna!" });
 });
 
-// Ruta koju ona okida kada klikne "Klikni za pažnju"
-app.post("/send-attention", (req, res) => {
+// Marija šalje Branku
+app.post("/send-to-branko", (req, res) => {
+  if (!mySubscription) {
+    return res.status(400).json({ error: "Brankov uređaj nije registrovan!" });
+  }
+
   const payload = JSON.stringify({
-    title: "Marija želi pažnju! 🤍",
-    body: "Kliknula je na dugme u vašoj svemirskoj aplikaciji.",
+    title: "Pažnja! 🤍",
+    body: "Marija želi tvoju pažnju.",
     icon: "/icon.png"
   });
 
-  // Šalje notifikaciju svim registrovanim uređajima
-  Promise.all(
-    subscriptions.map(sub =>
-      webpush.sendNotification(sub, payload).catch(err => {
-        console.error("Greška pri slanju notifikacije:", err);
-      })
-    )
-  );
-
-  res.status(200).json({ success: true });
+  webpush.sendNotification(mySubscription, payload)
+    .then(() => res.status(200).json({ success: true }))
+    .catch(err => {
+      console.error("Greška pri slanju Branku:", err);
+      res.status(500).json({ error: "Greška pri slanju" });
+    });
 });
 
-// --- DODATO: Serviranje Vite/React frontenda ---
+// Branko šalje Mariji
+app.post("/send-to-marija", (req, res) => {
+  if (!herSubscription) {
+    return res.status(400).json({ error: "Marijin uređaj nije registrovan!" });
+  }
+
+  const payload = JSON.stringify({
+    title: "Pažnja! 🤍",
+    body: "Branko želi tvoju pažnju.",
+    icon: "/icon.png"
+  });
+
+  webpush.sendNotification(herSubscription, payload)
+    .then(() => res.status(200).json({ success: true }))
+    .catch(err => {
+      console.error("Greška pri slanju Mariji:", err);
+      res.status(500).json({ error: "Greška pri slanju" });
+    });
+});
+
 app.use(express.static(path.join(__dirname, "dist")));
 
 app.get(/^(?!\/api).*/, (req, res) => {
