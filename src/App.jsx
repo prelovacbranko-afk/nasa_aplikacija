@@ -7,32 +7,56 @@ const BACKEND_URL = "https://nasa-aplikacija.onrender.com";
 function App() {
   const [role, setRole] = useState(localStorage.getItem("app_role") || null);
 
-  const selectRole = async (selectedRole) => {
-    localStorage.setItem("app_role", selectedRole);
-    setRole(selectedRole);
+  // Funkcija koja osigurava registraciju
+  const registerDevice = async (selectedRole) => {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+      alert("Push notifikacije nisu podržane na ovom pretraživaču.");
+      return;
+    }
 
-    if ("serviceWorker" in navigator && "PushManager" in window) {
+    try {
       const reg = await navigator.serviceWorker.register("/sw.js");
+      await navigator.serviceWorker.ready;
+
       const permission = await Notification.requestPermission();
-      if (permission === "granted") {
-        let sub = await reg.pushManager.getSubscription();
-        if (!sub) {
-          sub = await reg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: PUBLIC_VAPID_KEY
-          });
-        }
-        await fetch(`${BACKEND_URL}/subscribe`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ subscription: sub, role: selectedRole })
+      if (permission !== "granted") {
+        alert("Morate dozvoliti notifikacije da bi aplikacija radila!");
+        return;
+      }
+
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: PUBLIC_VAPID_KEY
         });
       }
+
+      // Slanje pretplate na server
+      const res = await fetch(`${BACKEND_URL}/subscribe`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subscription: sub, role: selectedRole })
+      });
+
+      if (res.ok) {
+        localStorage.setItem("app_role", selectedRole);
+        setRole(selectedRole);
+      }
+    } catch (err) {
+      console.error("Greška pri registraciji:", err);
+      alert("Greška pri registraciji uređaja. Proverite konzolu.");
     }
   };
 
+  // Automatska re-registracija ako je uloga već izabrana
+  useEffect(() => {
+    if (role) {
+      registerDevice(role);
+    }
+  }, [role]);
+
   const handleAttentionClick = async () => {
-    // Ako je Marija ulogovana, šalje Branku. Ako je Branko, šalje Mariji.
     const endpoint = role === "marija" ? "/send-to-branko" : "/send-to-marija";
     try {
       const res = await fetch(`${BACKEND_URL}${endpoint}`, {
@@ -42,7 +66,7 @@ function App() {
       if (data.success) {
         alert("Pažnja poslata! 🤍");
       } else {
-        alert("Greška: " + (data.error || "Proveri da li je drugi uređaj registrovan"));
+        alert("Greška: " + (data.error || "Drugi uređaj nije registrovan"));
       }
     } catch (err) {
       console.error("Greška pri slanju:", err);
@@ -53,10 +77,10 @@ function App() {
     return (
       <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", height: "100vh", background: "#000", color: "#fff", gap: "20px" }}>
         <h2>Ko koristi ovaj telefon?</h2>
-        <button onClick={() => selectRole("branko")} style={{ padding: "15px 30px", fontSize: "18px", background: "#2196F3", color: "#fff", border: "none", borderRadius: "10px" }}>
+        <button onClick={() => registerDevice("branko")} style={{ padding: "15px 30px", fontSize: "18px", background: "#2196F3", color: "#fff", border: "none", borderRadius: "10px" }}>
           Ja sam Branko
         </button>
-        <button onClick={() => selectRole("marija")} style={{ padding: "15px 30px", fontSize: "18px", background: "#E91E63", color: "#fff", border: "none", borderRadius: "10px" }}>
+        <button onClick={() => registerDevice("marija")} style={{ padding: "15px 30px", fontSize: "18px", background: "#E91E63", color: "#fff", border: "none", borderRadius: "10px" }}>
           Ja sam Marija
         </button>
       </div>
@@ -90,7 +114,7 @@ function App() {
 
       <div className="attention-wrapper" onClick={handleAttentionClick}>
         <span className="attention-text">
-          {role === "marija" ? "ŽELIM PAŽNJU" : "Pošalji pažnju Mariji"}
+          {role === "marija" ? "Želim pažnjuuuu" : "Pošalji pažnju Mariji"}
         </span>
       </div>
     </main>
