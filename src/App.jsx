@@ -7,32 +7,35 @@ const BACKEND_URL = "https://nasa-aplikacija.onrender.com";
 function App() {
   const [role, setRole] = useState(localStorage.getItem("app_role") || null);
 
-  // Funkcija koja osigurava registraciju
   const registerDevice = async (selectedRole) => {
-    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-      alert("Push notifikacije nisu podržane na ovom pretraživaču.");
-      return;
-    }
-
     try {
+      if (!("serviceWorker" in navigator)) {
+        alert("Service Worker nije podržan.");
+        return;
+      }
+
       const reg = await navigator.serviceWorker.register("/sw.js");
       await navigator.serviceWorker.ready;
 
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
-        alert("Morate dozvoliti notifikacije da bi aplikacija radila!");
+        alert("Moraš dozvoliti notifikacije u podešavanjima pretraživača!");
         return;
       }
 
-      let sub = await reg.pushManager.getSubscription();
-      if (!sub) {
-        sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: PUBLIC_VAPID_KEY
-        });
+      // Provera za PushManager, ali bez blokiranja
+      let sub = null;
+      if ("PushManager" in window) {
+        sub = await reg.pushManager.getSubscription();
+        if (!sub) {
+          sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: PUBLIC_VAPID_KEY
+          });
+        }
       }
 
-      // Slanje pretplate na server
+      // Slanje na server
       const res = await fetch(`${BACKEND_URL}/subscribe`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -45,11 +48,10 @@ function App() {
       }
     } catch (err) {
       console.error("Greška pri registraciji:", err);
-      alert("Greška pri registraciji uređaja. Proverite konzolu.");
+      alert("Greška: " + err.message);
     }
   };
 
-  // Automatska re-registracija ako je uloga već izabrana
   useEffect(() => {
     if (role) {
       registerDevice(role);
@@ -114,7 +116,7 @@ function App() {
 
       <div className="attention-wrapper" onClick={handleAttentionClick}>
         <span className="attention-text">
-          {role === "marija" ? "Želim pažnjuuuu" : "Pošalji pažnju Mariji"}
+          {role === "marija" ? "Želim pažnju!!!" : "Pošalji pažnju Marijii"}
         </span>
       </div>
     </main>
