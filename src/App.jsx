@@ -90,7 +90,7 @@ function App() {
 
       <div className="attention-wrapper" onClick={handleAttentionClick}>
         <span className="attention-text">
-          {role === "marija" ? "Pošalji pažnju Branku 🤍" : "Pošalji pažnju Mariji 🤍"}
+          {role === "marija" ? "ŽELIM PAŽNJU" : "Pošalji pažnju Mariji"}
         </span>
       </div>
     </main>
