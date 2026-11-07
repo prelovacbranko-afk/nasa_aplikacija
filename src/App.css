@@ -1,0 +1,426 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #050816;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* 1. SLOJ: OSNOVNA POZADINA */
+.home-screen {
+  position: relative;
+  width: 100vw;
+  width: 100dvw;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  background: url("/images/pozadina.jpeg") center/cover no-repeat;
+}
+
+/* 2. SLOJ: FOTOGRAFIJA KOJA FEJDUJE I LEBDI */
+.couple-stage {
+  position: relative;
+  z-index: 2;
+  width: min(76.5vw, 324px); /* Smanjeno sa 85vw / 360px */
+  height: min(46.8vh, 414px); /* Smanjeno sa 52vh / 460px */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: -4vh;
+
+  animation: floatPhoto 6s ease-in-out infinite;
+}
+
+.couple-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+
+  /* Zadržana maska i sjaj sa blago prilagođenim srazmerama */
+  -webkit-mask-image: radial-gradient(
+    ellipse 75% 65% at 50% 50%,
+    rgba(0, 0, 0, 1) 0%,
+    rgba(0, 0, 0, 1) 50%,
+    rgba(0, 0, 0, 0.55) 75%,
+    transparent 95%
+  );
+  mask-image: radial-gradient(
+    ellipse 75% 65% at 50% 50%,
+    rgba(0, 0, 0, 1) 0%,
+    rgba(0, 0, 0, 1) 50%,
+    rgba(0, 0, 0, 0.55) 75%,
+    transparent 95%
+  );
+
+  filter: saturate(1.08) contrast(1.05);
+}
+
+@keyframes floatPhoto {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+/* 3. SLOJ: OVERLAY PRAŠINA, NEBULA I ZVEZDICE KOJE PREKRIVAJU IVICE SLIKE */
+.dust-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+
+  /* Vraćen tvoj originalni overlay koji ne ometa centar, već samo pravi kosmički ambijent po obodima */
+  background: 
+    radial-gradient(circle at 20% 50%, rgba(30, 80, 180, 0.3) 0%, transparent 45%),
+    radial-gradient(circle at 80% 50%, rgba(60, 120, 240, 0.3) 0%, transparent 45%),
+    radial-gradient(ellipse at center, transparent 45%, rgba(5, 8, 22, 0.5) 75%, rgba(5, 8, 22, 0.9) 100%),
+    radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.12) 0%, transparent 30%);
+
+  backdrop-filter: blur(1px);
+  -webkit-backdrop-filter: blur(1px);
+}
+
+/* PODEŠAVANJA (SETTINGS) ZUPČANIK */
+.settings-button {
+  position: absolute;
+  top: max(20px, env(safe-area-inset-top));
+  right: max(20px, env(safe-area-inset-right));
+  z-index: 10;
+
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 22px;
+  cursor: pointer;
+  padding: 8px;
+  transition: opacity 0.2s ease;
+}
+.settings-button:active {
+  opacity: 0.4;
+}
+
+/* DUGME / TEKST NA SAMOM DNU EKRANA */
+.attention-wrapper {
+  position: absolute;
+  /* Pozicija skroz dole uz ivicu ekrana */
+  bottom: max(16px, calc(env(safe-area-inset-bottom) + 6px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  padding: 12px 24px;
+}
+
+.attention-text {
+  /* Početna veličina duplo veća (34px), zagasita boja u tonu pozadine */
+  color: rgba(255, 255, 255, 0.65);
+  font-family: "Georgia", "Baskerville", serif;
+  font-size: 34px;
+  font-weight: 300;
+  font-style: italic;
+  letter-spacing: 2px;
+  white-space: nowrap;
+
+  /* Prigušena senka prilagođena tamnom svemiru */
+  text-shadow: 
+    0 0 12px rgba(100, 140, 220, 0.2),
+    0 2px 14px rgba(0, 0, 0, 0.6);
+
+  /* Uključena pulsirajuća animacija (menja veličinu i sjaj) */
+  animation: pulseText 4s ease-in-out infinite;
+}
+
+/* Efekat na dodir */
+.attention-wrapper:active .attention-text {
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 0 16px rgba(140, 180, 255, 0.4);
+}
+
+/* Pulsirajuća animacija: smenjivanje veličine (skaliranja) i providnosti */
+@keyframes pulseText {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scale(1.08); /* Blago se uvećava u ritmu pulsa */
+    opacity: 0.85;       /* Postaje malo svetliji dok raste */
+  }
+}
+
+/* SLOJ: Komete iza slike */
+.comets-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* Svaka kometa ima svetleću glavu i dugačak rep unazad */
+.comet {
+  position: absolute;
+  width: 160px;
+  height: 2px;
+  /* Rep komete: s leva (providno) ka desnu (jako belo - glava komete) */
+  background: linear-gradient(90deg, transparent 0%, rgba(130, 180, 255, 0.4) 60%, rgba(255, 255, 255, 1) 100%);
+  border-radius: 100px;
+  filter: drop-shadow(0 0 6px rgba(180, 220, 255, 0.9));
+  opacity: 0;
+  
+  /* Ugao rotacije prati strmu dijagonalu telefona (oko 62 stepena) */
+  transform-origin: right center;
+  transform: rotate(62deg);
+}
+
+/* Mala sjajna glava na vrhu komete */
+.comet::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: -1px;
+  width: 4px;
+  height: 4px;
+  background: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 10px 2px rgba(255, 255, 255, 0.9);
+}
+
+/* Pozicije i brze animacije (prelet traje ~0.8s, a ukupni ciklus sa pauzom 5-7s) */
+.comet.c1 {
+  top: -10%;
+  left: 10%;
+  animation: fastComet1 5s cubic-bezier(0.25, 0.1, 0.25, 1) infinite;
+}
+
+.comet.c2 {
+  top: -15%;
+  left: 45%;
+  animation: fastComet2 7s cubic-bezier(0.25, 0.1, 0.25, 1) infinite 2.2s;
+}
+
+.comet.c3 {
+  top: 10%;
+  left: -20%;
+  animation: fastComet3 6s cubic-bezier(0.25, 0.1, 0.25, 1) infinite 4s;
+}
+
+/* Animacije: brzi prelet ukoso nadole i udesno (ugao kretanja se 100% poklapa sa 62deg rotacijom) */
+@keyframes fastComet1 {
+  0% {
+    transform: translate(0, 0) rotate(62deg);
+    opacity: 0;
+  }
+  3% {
+    opacity: 1;
+  }
+  15% {
+    /* Prelet u trajanju od samo ~0.7s */
+    transform: translate(120vw, 225vh) rotate(62deg);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(120vw, 225vh) rotate(62deg);
+    opacity: 0;
+  }
+}
+
+@keyframes fastComet2 {
+  0% {
+    transform: translate(0, 0) rotate(62deg);
+    opacity: 0;
+  }
+  3% {
+    opacity: 1;
+  }
+  14% {
+    transform: translate(120vw, 225vh) rotate(62deg);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(120vw, 225vh) rotate(62deg);
+    opacity: 0;
+  }
+}
+
+@keyframes fastComet3 {
+  0% {
+    transform: translate(0, 0) rotate(62deg);
+    opacity: 0;
+  }
+  3% {
+    opacity: 1;
+  }
+  16% {
+    transform: translate(120vw, 225vh) rotate(62deg);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(120vw, 225vh) rotate(62deg);
+    opacity: 0;
+  }
+}
+/* SLOJ: Komete i supernove iza slike */
+.comets-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* --- KOMETE --- */
+.comet {
+  position: absolute;
+  width: 160px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, rgba(130, 180, 255, 0.4) 60%, rgba(255, 255, 255, 1) 100%);
+  border-radius: 100px;
+  filter: drop-shadow(0 0 6px rgba(180, 220, 255, 0.9));
+  opacity: 0;
+  transform-origin: right center;
+  transform: rotate(62deg);
+}
+
+.comet::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: -1px;
+  width: 4px;
+  height: 4px;
+  background: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 10px 2px rgba(255, 255, 255, 0.9);
+}
+
+.comet.c1 {
+  top: -10%;
+  left: 10%;
+  animation: fastComet1 5s cubic-bezier(0.25, 0.1, 0.25, 1) infinite;
+}
+
+.comet.c2 {
+  top: -15%;
+  left: 45%;
+  animation: fastComet2 7s cubic-bezier(0.25, 0.1, 0.25, 1) infinite 2.2s;
+}
+
+.comet.c3 {
+  top: 10%;
+  left: -20%;
+  animation: fastComet3 6s cubic-bezier(0.25, 0.1, 0.25, 1) infinite 4s;
+}
+
+@keyframes fastComet1 {
+  0% { transform: translate(0, 0) rotate(62deg); opacity: 0; }
+  3% { opacity: 1; }
+  15% { transform: translate(120vw, 225vh) rotate(62deg); opacity: 0; }
+  100% { transform: translate(120vw, 225vh) rotate(62deg); opacity: 0; }
+}
+
+@keyframes fastComet2 {
+  0% { transform: translate(0, 0) rotate(62deg); opacity: 0; }
+  3% { opacity: 1; }
+  14% { transform: translate(120vw, 225vh) rotate(62deg); opacity: 0; }
+  100% { transform: translate(120vw, 225vh) rotate(62deg); opacity: 0; }
+}
+
+@keyframes fastComet3 {
+  0% { transform: translate(0, 0) rotate(62deg); opacity: 0; }
+  3% { opacity: 1; }
+  16% { transform: translate(120vw, 225vh) rotate(62deg); opacity: 0; }
+  100% { transform: translate(120vw, 225vh) rotate(62deg); opacity: 0; }
+}
+
+
+/* --- SUPERNOVE / TELESKOPSKI BLJESKOVI --- */
+.supernova {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: #ffffff;
+  border-radius: 50%;
+  opacity: 0;
+  /* Svetlosni oreol oko blica nalik teleskopskom snimku */
+  box-shadow: 
+    0 0 8px 3px rgba(255, 255, 255, 0.9),
+    0 0 16px 6px rgba(130, 180, 255, 0.6),
+    0 0 25px 10px rgba(100, 140, 220, 0.3);
+  animation: supernovaFlash 9s ease-in-out infinite;
+}
+
+/* Različite pozicije i dugi intervali (da se dešavaju retko i nasumično) */
+.supernova.s1 {
+  top: 25%;
+  left: 20%;
+  animation-delay: 1s;
+  animation-duration: 11s;
+}
+
+.supernova.s2 {
+  top: 65%H; /* ili 65% */
+  top: 65%;
+  left: 75%;
+  animation-delay: 4.5s;
+  animation-duration: 13s;
+}
+
+.supernova.s3 {
+  top: 35%;
+  left: 85%;
+  animation-delay: 8s;
+  animation-duration: 10s;
+}
+
+/* Animacija blica: većinu vremena spavaju (providne su), pa naglo blesnu i utihnu */
+@keyframes supernovaFlash {
+  0%, 100% {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+  48% {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+  50% {
+    /* Trenutak eksplozije / bljeska */
+    transform: scale(1.4);
+    opacity: 1;
+  }
+  53% {
+    transform: scale(0.8);
+    opacity: 0.3;
+  }
+  56% {
+    transform: scale(1.1);
+    opacity: 0.7;
+  }
+  60% {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+}

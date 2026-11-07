@@ -1,0 +1,15 @@
+{
+  "short_name": "Pažnja",
+  "name": "Svemir Pažnja",
+  "icons": [
+    {
+      "src": "icon.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#050816",
+  "theme_color": "#050816",
+  "display": "standalone"
+}
