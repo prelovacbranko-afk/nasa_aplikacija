@@ -17,13 +17,13 @@ function App() {
       const reg = await navigator.serviceWorker.register("/sw.js");
       await navigator.serviceWorker.ready;
 
-      const permission = await Notification.requestPermission();
+      // Ispravljeno sa Notification na window.Notification
+      const permission = await window.Notification.requestPermission();
       if (permission !== "granted") {
         alert("Moraš dozvoliti notifikacije u podešavanjima pretraživača!");
         return;
       }
 
-      // Provera za PushManager, ali bez blokiranja
       let sub = null;
       if ("PushManager" in window) {
         sub = await reg.pushManager.getSubscription();
@@ -35,7 +35,6 @@ function App() {
         }
       }
 
-      // Slanje na server
       const res = await fetch(`${BACKEND_URL}/subscribe`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -116,7 +115,7 @@ function App() {
 
       <div className="attention-wrapper" onClick={handleAttentionClick}>
         <span className="attention-text">
-          {role === "marija" ? "Želim pažnju!!!" : "Pošalji pažnju Marijii"}
+          {role === "marija" ? "Želim pažnjuuuu!!!" : "Pošalji pažnju Mariji 🤍"}
         </span>
       </div>
     </main>
