@@ -17,11 +17,13 @@ function App() {
       const reg = await navigator.serviceWorker.register("/sw.js");
       await navigator.serviceWorker.ready;
 
-      // Ispravljeno sa Notification na window.Notification
-      const permission = await window.Notification.requestPermission();
-      if (permission !== "granted") {
-        alert("Moraš dozvoliti notifikacije u podešavanjima pretraživača!");
-        return;
+      // Bezbedno traženje dozvole za Safari / iOS
+      if (typeof window !== "undefined" && "Notification" in window) {
+        const permission = await window.Notification.requestPermission();
+        if (permission !== "granted") {
+          alert("Moraš dozvoliti notifikacije u podešavanjima pretraživača!");
+          return;
+        }
       }
 
       let sub = null;
@@ -115,7 +117,7 @@ function App() {
 
       <div className="attention-wrapper" onClick={handleAttentionClick}>
         <span className="attention-text">
-          {role === "marija" ? "Želim pažnjuuuu!!!" : "Pošalji pažnju Mariji 🤍"}
+          {role === "marija" ? "Pošalji pažnju Branku 🤍" : "Pošalji pažnju Mariji 🤍"}
         </span>
       </div>
     </main>
