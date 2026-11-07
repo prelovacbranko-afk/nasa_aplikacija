@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import "./App.css";
 
-const PUBLIC_VAPID_KEY = "TVOJ_PUBLIC_VAPID_KEY"; // Isti public key kao na backendu
-const BACKEND_URL = "https://tvoj-backend-demo.render.com"; // Tvoj public URL
+const PUBLIC_VAPID_KEY = "BMDbWRoEMLNqmlTYG6DEDoe8DHOWKLwTjuzDiAfQlCfqQmWBH_7t7sSZWVsHVGQmn7Q0ilPUaM-EY0HZmbIJkek"; // Isti public key kao na backendu
+const BACKEND_URL = "https://nasa-aplikacija.onrender.com/"; // Tvoj public URL
 
 function App() {
   useEffect(() => {
